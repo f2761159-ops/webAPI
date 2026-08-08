@@ -22,12 +22,16 @@ def home():
 @app.get("/api/discord-status")
 def get_discord_status():
     try:
-        # Mesure du temps de réponse avant/après la requête
+        # Enregistrement du temps exact avant l'appel à l'API Discord
         start_time = time.time()
+        
+        # Requête directe vers les serveurs de Discord
         response = requests.get(DISCORD_STATUS_URL, timeout=10)
+        
+        # Enregistrement du temps après réception de la réponse
         end_time = time.time()
 
-        # Conversion en millisecondes (ms)
+        # Temps de réponse réel de l'API Discord en millisecondes (ms)
         latency_ms = round((end_time - start_time) * 1000)
 
         data = response.json()
