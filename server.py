@@ -12,12 +12,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# URL officielle corrigée
 DISCORD_STATUS_URL = "https://discordstatus.com/api/v2/summary.json"
 
 @app.get("/")
 def home():
-    return {"status": "API en ligne", "version": "2.0"}
+    return {"status": "API en ligne", "version": "3.0"}
 
 @app.get("/api/discord-status")
 def get_discord_status():
@@ -26,26 +25,36 @@ def get_discord_status():
         data = response.json()
 
         raw_components = data.get("components", [])
-        filtered_components = []
+        api_services = []
+        region_services = []
+
+        # Liste de mots-clés pour identifier les régions/pays
+        region_keywords = [
+            "brazil", "rotterdam", "hong kong", "russia", "singapore", 
+            "south africa", "us east", "us west", "us central", "sydney", 
+            "japan", "india", "europe", "france", "voice"
+        ]
 
         for item in raw_components:
             name = item.get("name", "")
-            if "Voice" in name or "Server" in name or "Region" in name:
-                if any(region in name.lower() for region in ["france", "rotterdam", "eu-west", "europe"]):
-                    filtered_components.append(item)
+            # Séparation entre les régions et les services principaux (API/Web/etc.)
+            if any(keyword in name.lower() for keyword in region_keywords):
+                region_services.append(item)
             else:
-                filtered_components.append(item)
+                api_services.append(item)
 
         status_obj = data.get("status", {})
 
         return {
             "status_indicator": status_obj.get("indicator", "none"),
             "status_description": status_obj.get("description", "Tous les systèmes sont opérationnels"),
-            "components": filtered_components
+            "api_services": api_services,
+            "region_services": region_services
         }
     except Exception as e:
         return {
             "status_indicator": "error",
             "status_description": f"Erreur : {str(e)}",
-            "components": []
+            "api_services": [],
+            "region_services": []
         }
