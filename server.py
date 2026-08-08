@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
+import time
 
 app = FastAPI()
 
@@ -16,19 +17,24 @@ DISCORD_STATUS_URL = "https://discordstatus.com/api/v2/summary.json"
 
 @app.get("/")
 def home():
-    return {"status": "API en ligne", "version": "4.0"}
+    return {"status": "API en ligne", "version": "5.0"}
 
 @app.get("/api/discord-status")
 def get_discord_status():
     try:
+        # Mesure du temps de réponse avant/après la requête
+        start_time = time.time()
         response = requests.get(DISCORD_STATUS_URL, timeout=10)
-        data = response.json()
+        end_time = time.time()
 
+        # Conversion en millisecondes (ms)
+        latency_ms = round((end_time - start_time) * 1000)
+
+        data = response.json()
         raw_components = data.get("components", [])
         api_services = []
         region_services = []
 
-        # Liste exacte des mots-clés appartenant STRICTEMENT aux API et Services globaux
         global_keywords = [
             "api", "desktop", "ios", "android", "web", "search", 
             "gateway", "cloudflare", "media proxy", "push notifications", 
@@ -38,12 +44,9 @@ def get_discord_status():
 
         for item in raw_components:
             name = item.get("name", "").lower()
-            
-            # Si le nom contient un des mots-clés globaux -> Graphique de gauche
             if any(keyword in name for keyword in global_keywords):
                 api_services.append(item)
             else:
-                # Tout le reste (villes, pays, régions vocales) -> Graphique de droite
                 region_services.append(item)
 
         status_obj = data.get("status", {})
@@ -51,6 +54,7 @@ def get_discord_status():
         return {
             "status_indicator": status_obj.get("indicator", "none"),
             "status_description": status_obj.get("description", "Tous les systèmes sont opérationnels"),
+            "latency_ms": latency_ms,
             "api_services": api_services,
             "region_services": region_services
         }
@@ -58,6 +62,7 @@ def get_discord_status():
         return {
             "status_indicator": "error",
             "status_description": f"Erreur : {str(e)}",
+            "latency_ms": 0,
             "api_services": [],
             "region_services": []
         }
