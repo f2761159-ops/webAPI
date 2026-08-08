@@ -16,7 +16,7 @@ DISCORD_STATUS_URL = "https://discordstatus.com/api/v2/summary.json"
 
 @app.get("/")
 def home():
-    return {"status": "API en ligne", "version": "3.0"}
+    return {"status": "API en ligne", "version": "4.0"}
 
 @app.get("/api/discord-status")
 def get_discord_status():
@@ -28,20 +28,23 @@ def get_discord_status():
         api_services = []
         region_services = []
 
-        # Liste de mots-clés pour identifier les régions/pays
-        region_keywords = [
-            "brazil", "rotterdam", "hong kong", "russia", "singapore", 
-            "south africa", "us east", "us west", "us central", "sydney", 
-            "japan", "india", "europe", "france", "voice"
+        # Liste exacte des mots-clés appartenant STRICTEMENT aux API et Services globaux
+        global_keywords = [
+            "api", "desktop", "ios", "android", "web", "search", 
+            "gateway", "cloudflare", "media proxy", "push notifications", 
+            "creator payouts", "tax calculation", "third-party", 
+            "server web pages", "client", "payments", "marketing site"
         ]
 
         for item in raw_components:
-            name = item.get("name", "")
-            # Séparation entre les régions et les services principaux (API/Web/etc.)
-            if any(keyword in name.lower() for keyword in region_keywords):
-                region_services.append(item)
-            else:
+            name = item.get("name", "").lower()
+            
+            # Si le nom contient un des mots-clés globaux -> Graphique de gauche
+            if any(keyword in name for keyword in global_keywords):
                 api_services.append(item)
+            else:
+                # Tout le reste (villes, pays, régions vocales) -> Graphique de droite
+                region_services.append(item)
 
         status_obj = data.get("status", {})
 
