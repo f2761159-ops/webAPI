@@ -12,7 +12,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DISCORD_STATUS_URL = "https://sstatus.discordapp.com/api/v2/summary.json"
+# URL officielle corrigée
+DISCORD_STATUS_URL = "https://discordstatus.com/api/v2/summary.json"
 
 @app.get("/")
 def home():
