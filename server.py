@@ -2,10 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 
-# Ne pas modifier ce nom : Uvicorn cherche exactement la variable 'app'
 app = FastAPI()
 
-# Autorise ton site web HTML à interroger l'API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,21 +29,22 @@ def get_discord_status():
 
         for item in raw_components:
             name = item.get("name", "")
-
-            # Filtrage des serveurs vocaux/régionaux : garde uniquement la France / Europe
             if "Voice" in name or "Server" in name or "Region" in name:
                 if any(region in name.lower() for region in ["france", "rotterdam", "eu-west", "europe"]):
                     filtered_components.append(item)
             else:
-                # Tous les autres services globaux (API, Gateway, Web, etc.) sont conservés
                 filtered_components.append(item)
 
+        status_obj = data.get("status", {})
+
         return {
-            "status_indicator": data.get("status", {}).get("indicator", "none"),
-            "status_description": data.get("status", {}).get("description", "Tous les systèmes sont opérationnels"),
-            "page_info": data.get("page", {}),
-            "components": filtered_components,
-            "incidents": data.get("incidents", [])
+            "status_indicator": status_obj.get("indicator", "none"),
+            "status_description": status_obj.get("description", "Tous les systèmes sont opérationnels"),
+            "components": filtered_components
         }
     except Exception as e:
-        return {"error": str(e), "components": []}
+        return {
+            "status_indicator": "error",
+            "status_description": f"Erreur : {str(e)}",
+            "components": []
+        }
