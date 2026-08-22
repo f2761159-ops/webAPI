@@ -4,31 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rescue Horizon - Dashboard</title>
-    <!-- Socket.io Client -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0f111a;
-            color: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            overflow-x: hidden;
+            background-color: #0f111a; color: #ffffff; min-height: 100vh; display: flex; overflow-x: hidden;
         }
-
-        /* MODAL DE CONNEXION */
         .login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at center, #1b223d 0%, #080a10 70%, #000000 100%);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 9999; backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(8px);
         }
         .login-card {
             background-color: rgba(26, 29, 46, 0.9); padding: 30px; border-radius: 12px;
             border: 1px solid rgba(88, 101, 242, 0.4); width: 350px; text-align: center;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 20px rgba(88, 101, 242, 0.2);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9);
         }
         .login-card h2 { color: #5865F2; margin-bottom: 15px; }
         .login-card input {
@@ -36,13 +28,10 @@
             background: #121420; color: #fff; margin-bottom: 15px;
         }
         .login-card button {
-            width: 100%; padding: 10px; background: #5865F2; color: white;
-            border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
+            width: 100%; padding: 10px; background: #5865F2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
         }
-        .login-card button:hover { background: #4752c4; }
         .login-error { color: #f23f43; font-size: 0.85rem; margin-top: 10px; }
 
-        /* LAYOUT PRINCIPAL */
         .app-container { display: flex; width: 100%; min-height: 100vh; }
         .sidebar {
             width: 260px; background-color: #121420; border-right: 1px solid #2a2e45;
@@ -61,52 +50,63 @@
 
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header-bar {
-            background: #1a1d2e; padding: 20px; border-radius: 12px;
-            border: 1px solid #2a2e45; margin-bottom: 20px;
+            background: #1a1d2e; padding: 20px; border-radius: 12px; border: 1px solid #2a2e45; margin-bottom: 20px;
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        /* BLOCS & CARTES */
         .update-box {
-            background-color: #1a1d2e; border: 1px solid #5865F2; border-radius: 12px;
-            padding: 20px; margin-bottom: 20px;
+            background-color: #1a1d2e; border: 1px solid #5865F2; border-radius: 12px; padding: 20px; margin-bottom: 20px;
         }
         .update-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .update-title { font-size: 1.1rem; color: #5865F2; font-weight: bold; }
         .update-content {
-            background: #121420; padding: 15px; border-radius: 8px; border: 1px solid #2a2e45;
-            font-size: 0.95rem; line-height: 1.5; color: #e1e3ec; white-space: pre-wrap;
+            background: #121420; padding: 15px; border-radius: 8px; border: 1px solid #2a2e45; font-size: 0.95rem; line-height: 1.5; color: #e1e3ec; white-space: pre-wrap;
         }
 
         .admin-update-controls {
-            margin-top: 15px; display: none; flex-direction: column; gap: 10px;
-            border-top: 1px dashed #2a2e45; padding-top: 15px;
+            margin-top: 15px; display: none; flex-direction: column; gap: 10px; border-top: 1px dashed #2a2e45; padding-top: 15px;
         }
         .admin-update-controls textarea, .admin-update-controls input {
-            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2e3352;
-            background: #121420; color: white; font-family: inherit;
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2e3352; background: #121420; color: white; font-family: inherit;
         }
         .admin-update-controls textarea { resize: vertical; height: 80px; }
         .btn-save { background: #5865F2; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-save:hover { background: #4752c4; }
 
-        /* CRÉDITS & PUB */
         .credits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .credits-card { background-color: #1a1d2e; border: 1px solid #2a2e45; border-radius: 12px; padding: 25px; }
         .credits-card h3 { color: #5865F2; margin-bottom: 15px; font-size: 1.1rem; }
         .credits-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
         .credits-list li {
-            background: #121420; padding: 10px 15px; border-radius: 8px; border: 1px solid #22263d;
-            font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;
+            background: #121420; padding: 10px 15px; border-radius: 8px; border: 1px solid #22263d; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;
         }
         .pub-box { background-color: #1a1d2e; border: 1px solid #5865F2; border-radius: 12px; padding: 25px; margin-bottom: 20px; line-height: 1.6; }
         .pub-box h3 { color: #5865F2; margin-bottom: 15px; font-size: 1.2rem; }
         .pub-content { font-size: 0.95rem; color: #d1d5db; white-space: pre-line; margin-bottom: 20px; }
         .btn-discord-pub {
-            display: inline-block; background: #5865F2; color: white; text-decoration: none;
-            padding: 12px 24px; border-radius: 8px; font-weight: bold; transition: background 0.2s;
+            display: inline-block; background: #5865F2; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;
         }
-        .btn-discord-pub:hover { background: #4752c4; }
+
+        /* STYLE DES BARRES DE STATUS TYPE STATUSPAGE */
+        .component-row {
+            background: #121420; border: 1px solid #2a2e45; border-radius: 8px; padding: 15px; margin-bottom: 12px;
+        }
+        .component-info {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.95rem;
+        }
+        .bars-container {
+            display: flex; gap: 3px; height: 30px; align-items: center; width: 100%; overflow: hidden;
+        }
+        .status-bar {
+            flex: 1; height: 28px; border-radius: 2px; transition: background 0.2s;
+        }
+        .status-bar.operational { background-color: #23a55a; }
+        .status-bar.degraded { background-color: #f0b232; }
+        .status-bar.partial { background-color: #f0b232; }
+        .status-bar.major { background-color: #f23f43; }
+
+        .bar-labels {
+            display: flex; justify-content: space-between; font-size: 0.75rem; color: #a0a5c0; margin-top: 5px;
+        }
 
         .voice-regions-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .voice-regions-table th, .voice-regions-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #2a2e45; }
@@ -119,7 +119,6 @@
 </head>
 <body>
 
-    <!-- MODAL DE CONNEXION -->
     <div id="loginModal" class="login-overlay">
         <div class="login-card">
             <h2>Rescue Horizon</h2>
@@ -131,7 +130,6 @@
     </div>
 
     <div class="app-container">
-        <!-- MENU LATÉRAL -->
         <div class="sidebar">
             <div class="sidebar-top">
                 <h2>Rescue Horizon</h2>
@@ -151,7 +149,6 @@
             </div>
         </div>
 
-        <!-- CONTENU PRINCIPAL -->
         <div class="main-content">
             <div class="header-bar">
                 <div><h1>Panel Rescue Horizon</h1></div>
@@ -161,8 +158,6 @@
             <!-- SECTION 1 : CRÉDITS -->
             <div id="view-credits" class="view-section active">
                 <h2>💖 Crédits & Remerciements</h2>
-                <p style="font-size: 0.85rem; color: #a0a5c0; margin-bottom: 20px;">Synchronisé en direct avec le serveur.</p>
-
                 <div class="credits-grid">
                     <div class="credits-card">
                         <h3>🏆 Équipe & Remerciements</h3>
@@ -174,11 +169,10 @@
 
                 <div class="pub-box">
                     <h3 id="pubTitleDisplay">🚨 RESCUE HORIZON</h3>
-                    <div class="pub-content" id="pubContentDisplay">Chargement des informations...</div>
+                    <div class="pub-content" id="pubContentDisplay">Chargement...</div>
                     <a href="https://discord.gg/Jdba4YvEAG" target="_blank" class="btn-discord-pub" id="pubLinkBtn">🔗 Rejoindre le Discord</a>
                 </div>
 
-                <!-- PANNEAU ADMIN CRÉDITS -->
                 <div id="adminCreditsPanel" class="update-box" style="display: none; border-color: #23a55a;">
                     <div class="update-title" style="color: #23a55a; margin-bottom: 12px;">🛠️ Administration (Crédits & Pub)</div>
                     <div class="admin-update-controls" style="display: flex; border-top: none; padding-top: 0;">
@@ -195,15 +189,14 @@
                         <input type="text" id="editPubLinkInput">
 
                         <div style="margin-top: 15px;">
-                            <button class="btn-save" style="background: #23a55a;" onclick="publishCreditsAndPub()">💾 Publier en Temps Réel</button>
+                            <button class="btn-save" style="background: #23a55a;" onclick="publishCreditsAndPub()">💾 Publier</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION 2 : TABLEAU DE BORD (100% CONCRET) -->
+            <!-- SECTION 2 : TABLEAU DE BORD & HISTORIQUES STYLE DISCORD -->
             <div id="view-dashboard" class="view-section">
-                <!-- Bloc Annonces -->
                 <div class="update-box">
                     <div class="update-header">
                         <div class="update-title">🚀 Informations & Annonces</div>
@@ -212,42 +205,36 @@
                     <div class="update-content" id="siteUpdateDisplay">Chargement...</div>
 
                     <div id="adminUpdatePanel" class="admin-update-controls">
-                        <label style="font-size:0.85rem; color:#5865F2; font-weight:bold;">Éditer l'annonce (Admin) :</label>
-                        <textarea id="siteUpdateInput" placeholder="Message..."></textarea>
-                        <div style="display: flex; gap: 10px;">
-                            <button class="btn-save" onclick="publishSiteUpdate()">💾 Publier en Temps Réel</button>
-                        </div>
+                        <label style="font-size:0.85rem; color:#5865F2; font-weight:bold;">Éditer l'annonce :</label>
+                        <textarea id="siteUpdateInput"></textarea>
+                        <div><button class="btn-save" onclick="publishSiteUpdate()">💾 Publier</button></div>
                     </div>
                 </div>
 
-                <!-- Bloc État des Systèmes & Services Officiels -->
+                <!-- SECTION HISTORIQUE DES BARRES OFFICIELLES -->
                 <div class="update-box">
-                    <div class="update-title" style="margin-bottom: 8px;">📊 État des Systèmes & Services Officiels</div>
+                    <div class="update-title" style="margin-bottom: 6px;">📊 Historique des Services & Statut Global</div>
                     <div id="discord-global-status" style="font-size: 0.9rem; color: #23a55a; margin-bottom: 15px; font-weight: bold;">
-                        Chargement du statut global...
+                        Chargement de l'état global...
                     </div>
                     
-                    <div id="status-container">
-                        <div style="color: #a0a5c0; font-size: 0.9rem;">Interrogation des serveurs en cours...</div>
+                    <div id="status-bars-container">
+                        <div style="color: #a0a5c0; font-size: 0.9rem;">Chargement des graphiques d'historique...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION 3 : GESTION DES PSEUDOS -->
+            <!-- SECTION 3 : PSEUDOS -->
             <div id="view-pseudos" class="view-section">
                 <h2>👥 Gestion des Pseudos Enregistrés</h2>
                 <div class="update-box">
                     <div style="overflow-x: auto;">
                         <table class="voice-regions-table">
                             <thead>
-                                <tr>
-                                    <th>Pseudo</th>
-                                    <th>Date/Heure</th>
-                                    <th>Rôle</th>
-                                </tr>
+                                <tr><th>Pseudo</th><th>Date/Heure</th><th>Rôle</th></tr>
                             </thead>
                             <tbody id="pseudosTableBody">
-                                <tr><td colspan="3" style="text-align: center; color: #a0a5c0;">Chargement...</td></tr>
+                                <tr><td colspan="3" style="text-align: center; color: #a0a50;">Chargement...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -286,53 +273,57 @@
             }
         }
 
-        // --- ECOUTE DES EVENEMENTS TEMPS RÉEL ---
-
         socket.on("loadInitialData", (data) => {
             updateDashboardUI(data.announcement);
             updateCreditsUI(data.credits);
             updatePseudosUI(data.pseudos);
         });
 
-        socket.on("updateAnnounceBroadcast", (data) => {
-            updateDashboardUI(data);
-        });
+        socket.on("updateAnnounceBroadcast", (data) => updateDashboardUI(data));
+        socket.on("updateCreditsBroadcast", (data) => updateCreditsUI(data));
+        socket.on("updatePseudosList", (pseudos) => updatePseudosUI(pseudos));
 
-        socket.on("updateCreditsBroadcast", (data) => {
-            updateCreditsUI(data);
-        });
+        // Génération dynamique des barres journalières style Discord
+        socket.on("realHistoryUpdate", (data) => {
+            document.getElementById("discord-global-status").innerText = `Statut Officiel : ${data.discordSummary}`;
 
-        socket.on("updatePseudosList", (pseudos) => {
-            updatePseudosUI(pseudos);
-        });
-
-        // Réception des vrais statuts officiels du serveur (sans blabla)
-        socket.on("realStatusUpdate", (data) => {
-            const globalStatusEl = document.getElementById("discord-global-status");
-            if (globalStatusEl) {
-                globalStatusEl.innerText = `Statut Officiel : ${data.discordSummary}`;
-            }
-
-            const container = document.getElementById("status-container");
+            const container = document.getElementById("status-bars-container");
             if (!container) return;
             
             container.innerHTML = "";
-            data.services.forEach(service => {
-                const color = service.status === 'up' ? '#23a55a' : '#f23f43';
-                const textStatus = service.status === 'up' ? 'OPÉRATIONNEL' : 'HORS LIGNE';
-                
+            
+            data.components.forEach(comp => {
+                let statusText = comp.status === 'operational' ? 'Opérationnel' : 'Incident détecté';
+                let statusColor = comp.status === 'operational' ? '#23a55a' : '#f23f43';
+
+                // Construction des barres pour chaque jour
+                let barsHtml = '';
+                if (comp.days && comp.days.length > 0) {
+                    comp.days.forEach(day => {
+                        let barClass = 'operational';
+                        if (day.status === 'degraded_performance' || day.status === 'partial_outage') barClass = 'degraded';
+                        if (day.status === 'major_outage') barClass = 'major';
+                        barsHtml += `<div class="status-bar ${barClass}"></div>`;
+                    });
+                }
+
                 container.innerHTML += `
-                    <div class="service-box" style="border-left-color: ${color}; display: flex; justify-content: space-between; padding: 12px; margin-bottom: 8px; background: #121420; border-radius: 4px;">
-                        <span>${service.name}</span>
-                        <span style="font-weight:bold; color: ${color}">
-                            ${textStatus} ${service.ping > 0 ? `(${service.ping}ms)` : ''}
-                        </span>
+                    <div class="component-row">
+                        <div class="component-info">
+                            <span style="font-weight: bold;">${comp.name}</span>
+                            <span style="color: ${statusColor}; font-weight: bold; font-size: 0.85rem;">${statusText}</span>
+                        </div>
+                        <div class="bars-container">
+                            ${barsHtml}
+                        </div>
+                        <div class="bar-labels">
+                            <span>Il y a 90 jours</span>
+                            <span>Aujourd'hui</span>
+                        </div>
                     </div>
                 `;
             });
         });
-
-        // --- FONCTIONS D'AFFICHAGE ---
 
         function updateDashboardUI(data) {
             document.getElementById("siteUpdateDisplay").innerText = data.text || "Aucune information.";
@@ -343,7 +334,6 @@
         function updateCreditsUI(data) {
             const creditsListEl = document.getElementById("creditsListDisplay");
             let creditsHtml = "";
-            
             const rawCredits = data.creditsText || "Créateur & Développeur Principal | Vous";
             rawCredits.split("\n").forEach(line => {
                 if (line.trim() !== "") {
@@ -380,13 +370,10 @@
             tbody.innerHTML = html;
         }
 
-        // --- ACTIONS ADMIN ---
-
         function publishSiteUpdate() {
             if (userRole !== "admin") return;
-            const text = document.getElementById("siteUpdateInput").value;
-            socket.emit("saveAnnouncement", { text: text });
-            alert("Annonce publiée en temps réel !");
+            socket.emit("saveAnnouncement", { text: document.getElementById("siteUpdateInput").value });
+            alert("Annonce publiée !");
         }
 
         function publishCreditsAndPub() {
@@ -395,12 +382,10 @@
                 creditsText: document.getElementById("editCreditsInput").value,
                 pubTitle: document.getElementById("editPubTitleInput").value,
                 pubContent: document.getElementById("editPubContentInput").value,
-                pubLink: document.getElementById("editPubLinkInput -> editPubLinkInput" in window ? "..." : "editPubLinkInput").value // sécurisé
+                pubLink: document.getElementById("editPubLinkInput").value
             };
-            // correction propre pour le champ lien
-            data.pubLink = document.getElementById("editPubLinkInput").value;
             socket.emit("saveCredits", data);
-            alert("Crédits et publication mis à jour en temps réel !");
+            alert("Crédits et publication mis à jour !");
         }
 
         function switchView(viewName, btn) {
