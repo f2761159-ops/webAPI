@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
 app.use(cors());
@@ -11,10 +12,10 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-// "Base de données" temporaire sur le serveur (sauvegardée en mémoire vive)
+// --- BASE DE DONNÉES EN MÉMOIRE ---
 let database = {
     announcement: {
-        text: "Bienvenue sur le tableau de bord de Rescue Horizon en temps réel.",
+        text: "Bienvenue sur le tableau de bord de Rescue Horizon.",
         date: new Date().toLocaleString("fr-FR")
     },
     credits: {
@@ -23,16 +24,43 @@ let database = {
         pubContent: "Tu cherches un jeu RP sérieux, actif et réaliste ? Bienvenue sur Rescue Horizon.",
         pubLink: "https://discord.gg/Jdba4YvEAG"
     },
-    pseudos: []
+    pseudos: [],
+    servicesStatus: []
 };
 
+// --- MONITORING AUTOMATIQUE (Toutes les 10s) ---
+const servicesToWatch = [
+    { name: "API Rescue Horizon", url: "https://webapi-jlzq.onrender.com" }
+];
+
+async function checkServices() {
+    let results = [];
+    for (let service of servicesToWatch) {
+        try {
+            const start = Date.now();
+            await axios.get(service.url, { timeout: 5000 });
+            results.push({ name: service.name, status: "up", ping: Date.now() - start });
+        } catch (e) {
+            results.push({ name: service.name, status: "down", ping: 0 });
+        }
+    }
+    database.servicesStatus = results;
+    // Envoie l'info de statut à TOUS les utilisateurs connectés
+    io.emit('statusUpdate', results);
+}
+
+// Lancer le monitoring toutes les 10 secondes
+setInterval(checkServices, 10000);
+
+// --- GESTION SOCKETS ---
 io.on('connection', (socket) => {
-    console.log('Un utilisateur s\'est connecté :', socket.id);
+    console.log('Utilisateur connecté :', socket.id);
 
-    // Envoyer l'état actuel de la base de données dès la connexion
+    // Envoi des données initiales au nouveau connecté
     socket.emit('loadInitialData', database);
+    socket.emit('statusUpdate', database.servicesStatus);
 
-    // Enregistrement d'un pseudo lors de la connexion au site
+    // Enregistrement pseudo
     socket.on('userLogin', (userData) => {
         database.pseudos.unshift({
             pseudo: userData.pseudo,
@@ -40,34 +68,24 @@ io.on('connection', (socket) => {
             role: userData.role === "admin" ? "Administrateur" : "Membre"
         });
         if (database.pseudos.length > 50) database.pseudos.pop();
-
-        // Diffuser la nouvelle liste des pseudos à tout le monde
         io.emit('updatePseudosList', database.pseudos);
     });
 
-    // Modification de l'annonce par l'admin
+    // Sauvegarde annonce
     socket.on('saveAnnouncement', (data) => {
-        database.announcement = {
-            text: data.text,
-            date: new Date().toLocaleString("fr-FR")
-        };
-        // Propager à TOUS les utilisateurs connectés instantanément
+        database.announcement = { text: data.text, date: new Date().toLocaleString("fr-FR") };
         io.emit('updateAnnounceBroadcast', database.announcement);
     });
 
-    // Modification des crédits/pub par l'admin
+    // Sauvegarde crédits
     socket.on('saveCredits', (data) => {
         database.credits = data;
-        // Propager à TOUS les utilisateurs connectés instantanément
         io.emit('updateCreditsBroadcast', database.credits);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Un utilisateur s\'est déconnecté');
     });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Serveur WebSocket & API actif sur le port ${PORT}`);
+    console.log(`Serveur actif sur le port ${PORT}`);
+    checkServices(); 
 });
