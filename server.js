@@ -15,7 +15,7 @@ const io = new Server(server, {
 // --- BASE DE DONNÉES EN MÉMOIRE ---
 let database = {
     announcement: {
-        text: "Bienvenue sur le tableau de bord de Rescue Horizon.",
+        text: "Bienvenue sur le tableau de bord officiel de Rescue Horizon.",
         date: new Date().toLocaleString("fr-FR")
     },
     credits: {
@@ -28,39 +28,47 @@ let database = {
     servicesStatus: []
 };
 
-// --- MONITORING AUTOMATIQUE (Toutes les 10s) ---
+// --- LISTE DES VRAIS SERVICES À SURVEILLER ---
+// (Modifiez ou ajoutez de vraies URL ici selon vos besoins)
 const servicesToWatch = [
-    { name: "API Rescue Horizon", url: "https://webapi-jlzq.onrender.com" }
+    { name: "API Backend Rescue Horizon", url: "https://webapi-jlzq.onrender.com" },
+    { name: "Google (Test Réseau Global)", url: "https://www.google.com" },
+    { name: "Cloudflare (DNS & Edge)", url: "https://www.cloudflare.com" }
 ];
 
+// Fonction pour effectuer de vraies requêtes et mesurer la latence réelle
 async function checkServices() {
     let results = [];
     for (let service of servicesToWatch) {
+        const start = Date.now();
         try {
-            const start = Date.now();
+            // Requête HTTP réelle avec un timeout de 5 secondes
             await axios.get(service.url, { timeout: 5000 });
-            results.push({ name: service.name, status: "up", ping: Date.now() - start });
+            const ping = Date.now() - start; // Calcul du vrai ping en ms
+            results.push({ name: service.name, status: "up", ping: ping });
         } catch (e) {
+            // Si le site ne répond pas ou crash
             results.push({ name: service.name, status: "down", ping: 0 });
         }
     }
     database.servicesStatus = results;
-    // Envoie l'info de statut à TOUS les utilisateurs connectés
+    
+    // Diffusion en temps réel à TOUTES les personnes connectées sur le site
     io.emit('statusUpdate', results);
 }
 
-// Lancer le monitoring toutes les 10 secondes
+// Lancer la vraie vérification toutes les 10 secondes
 setInterval(checkServices, 10000);
 
-// --- GESTION SOCKETS ---
+// --- GESTION DES WEBSOCKETS ---
 io.on('connection', (socket) => {
-    console.log('Utilisateur connecté :', socket.id);
+    console.log('Nouvel utilisateur connecté :', socket.id);
 
-    // Envoi des données initiales au nouveau connecté
+    // Envoyer l'état actuel dès la connexion
     socket.emit('loadInitialData', database);
     socket.emit('statusUpdate', database.servicesStatus);
 
-    // Enregistrement pseudo
+    // Enregistrement d'un pseudo
     socket.on('userLogin', (userData) => {
         database.pseudos.unshift({
             pseudo: userData.pseudo,
@@ -71,13 +79,13 @@ io.on('connection', (socket) => {
         io.emit('updatePseudosList', database.pseudos);
     });
 
-    // Sauvegarde annonce
+    // Modification admin des annonces
     socket.on('saveAnnouncement', (data) => {
         database.announcement = { text: data.text, date: new Date().toLocaleString("fr-FR") };
         io.emit('updateAnnounceBroadcast', database.announcement);
     });
 
-    // Sauvegarde crédits
+    // Modification admin des crédits
     socket.on('saveCredits', (data) => {
         database.credits = data;
         io.emit('updateCreditsBroadcast', database.credits);
@@ -86,6 +94,6 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Serveur actif sur le port ${PORT}`);
-    checkServices(); 
+    console.log(`Serveur de surveillance 100% réel actif sur le port ${PORT}`);
+    checkServices(); // Premier test immédiat au lancement
 });
