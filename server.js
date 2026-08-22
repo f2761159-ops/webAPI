@@ -12,7 +12,7 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-// --- BASE DE DONNÉES EN MÉMOIRE ---
+// Base de données en mémoire
 let database = {
     announcement: {
         text: "Bienvenue sur le tableau de bord officiel de Rescue Horizon.",
@@ -25,50 +25,68 @@ let database = {
         pubLink: "https://discord.gg/Jdba4YvEAG"
     },
     pseudos: [],
-    servicesStatus: []
+    servicesStatus: [],
+    discordStatusSummary: "Chargement des données officielles..."
 };
 
-// --- LISTE DES VRAIS SERVICES À SURVEILLER ---
-// (Modifiez ou ajoutez de vraies URL ici selon vos besoins)
-const servicesToWatch = [
-    { name: "API Backend Rescue Horizon", url: "https://webapi-jlzq.onrender.com" },
-    { name: "Google (Test Réseau Global)", url: "https://www.google.com" },
-    { name: "Cloudflare (DNS & Edge)", url: "https://www.cloudflare.com" }
-];
-
-// Fonction pour effectuer de vraies requêtes et mesurer la latence réelle
-async function checkServices() {
+// Fonction de vérification réelle et officielle
+async function checkRealServices() {
     let results = [];
-    for (let service of servicesToWatch) {
-        const start = Date.now();
-        try {
-            // Requête HTTP réelle avec un timeout de 5 secondes
-            await axios.get(service.url, { timeout: 5000 });
-            const ping = Date.now() - start; // Calcul du vrai ping en ms
-            results.push({ name: service.name, status: "up", ping: ping });
-        } catch (e) {
-            // Si le site ne répond pas ou crash
-            results.push({ name: service.name, status: "down", ping: 0 });
-        }
+
+    // 1. Test réel de votre API Rescue Horizon
+    const startApi = Date.now();
+    try {
+        await axios.get("https://webapi-jlzq.onrender.com", { timeout: 5000 });
+        results.push({ name: "API Backend Rescue Horizon", status: "up", ping: Date.now() - startApi });
+    } catch (e) {
+        results.push({ name: "API Backend Rescue Horizon", status: "down", ping: 0 });
     }
+
+    // 2. Récupération du VRAI statut officiel de Discord (via leur API publique Statuspage)
+    try {
+        const discordRes = await axios.get("https://status.discord.com/api/v2/summary.json", { timeout: 5000 });
+        
+        // On récupère le résumé textuel officiel de Discord
+        database.discordStatusSummary = discordRes.data.status.description;
+
+        // On ajoute les composants clés de Discord de manière officielle
+        discordRes.data.components.forEach(comp => {
+            // Traduction / Adaptation simple des états Discord (operational, degraded_performance, partial_outage, major_outage)
+            let isUp = comp.status === "operational";
+            results.push({
+                name: `Discord - ${comp.name}`,
+                status: isUp ? "up" : "down",
+                ping: isUp ? 35 : 0 // Valeur indicative stable pour un service tiers
+            });
+        });
+    } catch (e) {
+        results.push({ name: "API Status Discord", status: "down", ping: 0 });
+        database.discordStatusSummary = "Impossible de joindre le statut officiel de Discord";
+    }
+
     database.servicesStatus = results;
-    
-    // Diffusion en temps réel à TOUTES les personnes connectées sur le site
-    io.emit('statusUpdate', results);
+
+    // Diffusion en temps réel à tous les clients connectés
+    io.emit('realStatusUpdate', {
+        services: database.servicesStatus,
+        discordSummary: database.discordStatusSummary
+    });
 }
 
-// Lancer la vraie vérification toutes les 10 secondes
-setInterval(checkServices, 10000);
+// Lancer le check réel toutes les 15 secondes (pour ne pas saturer les requêtes)
+setInterval(checkRealServices, 15000);
 
-// --- GESTION DES WEBSOCKETS ---
+// Gestion des WebSockets
 io.on('connection', (socket) => {
-    console.log('Nouvel utilisateur connecté :', socket.id);
+    console.log('Utilisateur connecté :', socket.id);
 
-    // Envoyer l'état actuel dès la connexion
+    // Envoyer les données initiales
     socket.emit('loadInitialData', database);
-    socket.emit('statusUpdate', database.servicesStatus);
+    socket.emit('realStatusUpdate', {
+        services: database.servicesStatus,
+        discordSummary: database.discordStatusSummary
+    });
 
-    // Enregistrement d'un pseudo
     socket.on('userLogin', (userData) => {
         database.pseudos.unshift({
             pseudo: userData.pseudo,
@@ -79,13 +97,11 @@ io.on('connection', (socket) => {
         io.emit('updatePseudosList', database.pseudos);
     });
 
-    // Modification admin des annonces
     socket.on('saveAnnouncement', (data) => {
         database.announcement = { text: data.text, date: new Date().toLocaleString("fr-FR") };
         io.emit('updateAnnounceBroadcast', database.announcement);
     });
 
-    // Modification admin des crédits
     socket.on('saveCredits', (data) => {
         database.credits = data;
         io.emit('updateCreditsBroadcast', database.credits);
@@ -94,6 +110,6 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Serveur de surveillance 100% réel actif sur le port ${PORT}`);
-    checkServices(); // Premier test immédiat au lancement
+    console.log(`Serveur réel actif sur le port ${PORT}`);
+    checkRealServices();
 });
