@@ -2,38 +2,327 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rescue Horizon - Dashboard</title>
+    <!-- Socket.io Client -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
     <style>
-        /* ... (Gardez vos styles CSS actuels, ils sont bons) ... */
-        .status-card { margin-top: 20px; }
-        .service-box { padding: 12px; margin-bottom: 8px; background: #121420; border-left: 4px solid #5865F2; border-radius: 4px; display: flex; justify-content: space-between; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f111a;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* MODAL DE CONNEXION */
+        .login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1b223d 0%, #080a10 70%, #000000 100%);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; backdrop-filter: blur(8px);
+        }
+        .login-card {
+            background-color: rgba(26, 29, 46, 0.9); padding: 30px; border-radius: 12px;
+            border: 1px solid rgba(88, 101, 242, 0.4); width: 350px; text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 20px rgba(88, 101, 242, 0.2);
+        }
+        .login-card h2 { color: #5865F2; margin-bottom: 15px; }
+        .login-card input {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2e3352;
+            background: #121420; color: #fff; margin-bottom: 15px;
+        }
+        .login-card button {
+            width: 100%; padding: 10px; background: #5865F2; color: white;
+            border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
+        }
+        .login-card button:hover { background: #4752c4; }
+        .login-error { color: #f23f43; font-size: 0.85rem; margin-top: 10px; }
+
+        /* LAYOUT PRINCIPAL */
+        .app-container { display: flex; width: 100%; min-height: 100vh; }
+        .sidebar {
+            width: 260px; background-color: #121420; border-right: 1px solid #2a2e45;
+            padding: 20px; display: flex; flex-direction: column; justify-content: space-between; z-index: 10;
+        }
+        .sidebar-top { display: flex; flex-direction: column; gap: 15px; }
+        .sidebar h2 { font-size: 1.2rem; color: #5865F2; margin-bottom: 15px; }
+        .nav-group { display: flex; flex-direction: column; gap: 8px; }
+        .nav-btn {
+            background: none; border: none; color: #a0a5c0; padding: 12px 15px;
+            text-align: left; border-radius: 8px; cursor: pointer; font-size: 0.95rem; transition: 0.2s;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background-color: #1a1d2e; color: #ffffff; border-left: 4px solid #5865F2;
+        }
+
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header-bar {
+            background: #1a1d2e; padding: 20px; border-radius: 12px;
+            border: 1px solid #2a2e45; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* BLOCS & CARTES */
+        .update-box {
+            background-color: #1a1d2e; border: 1px solid #5865F2; border-radius: 12px;
+            padding: 20px; margin-bottom: 20px;
+        }
+        .update-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .update-title { font-size: 1.1rem; color: #5865F2; font-weight: bold; }
+        .update-content {
+            background: #121420; padding: 15px; border-radius: 8px; border: 1px solid #2a2e45;
+            font-size: 0.95rem; line-height: 1.5; color: #e1e3ec; white-space: pre-wrap;
+        }
+
+        .admin-update-controls {
+            margin-top: 15px; display: none; flex-direction: column; gap: 10px;
+            border-top: 1px dashed #2a2e45; padding-top: 15px;
+        }
+        .admin-update-controls textarea, .admin-update-controls input {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2e3352;
+            background: #121420; color: white; font-family: inherit;
+        }
+        .admin-update-controls textarea { resize: vertical; height: 80px; }
+        .btn-save { background: #5865F2; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-save:hover { background: #4752c4; }
+        .btn-del { background: #f23f43; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+
+        /* CRÉDITS & PUB */
+        .credits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .credits-card { background-color: #1a1d2e; border: 1px solid #2a2e45; border-radius: 12px; padding: 25px; }
+        .credits-card h3 { color: #5865F2; margin-bottom: 15px; font-size: 1.1rem; }
+        .credits-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .credits-list li {
+            background: #121420; padding: 10px 15px; border-radius: 8px; border: 1px solid #22263d;
+            font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;
+        }
+        .pub-box { background-color: #1a1d2e; border: 1px solid #5865F2; border-radius: 12px; padding: 25px; margin-bottom: 20px; line-height: 1.6; }
+        .pub-box h3 { color: #5865F2; margin-bottom: 15px; font-size: 1.2rem; }
+        .pub-content { font-size: 0.95rem; color: #d1d5db; white-space: pre-line; margin-bottom: 20px; }
+        .btn-discord-pub {
+            display: inline-block; background: #5865F2; color: white; text-decoration: none;
+            padding: 12px 24px; border-radius: 8px; font-weight: bold; transition: background 0.2s;
+        }
+        .btn-discord-pub:hover { background: #4752c4; }
+
+        /* Style pour les boîtes de statut en temps réel */
+        .service-box { 
+            padding: 12px; 
+            margin-bottom: 8px; 
+            background: #121420; 
+            border-left: 4px solid #5865F2; 
+            border-radius: 4px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+
+        .voice-regions-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .voice-regions-table th, .voice-regions-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #2a2e45; }
+        .voice-regions-table th { background-color: #121420; color: #5865F2; font-size: 0.9rem; }
+        .voice-regions-table td { font-size: 0.85rem; color: #d1d5db; }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
     </style>
 </head>
 <body>
-    <!-- (Gardez tout votre structure HTML actuelle) -->
-    
-    <!-- AJOUTEZ CE BLOC DANS VOTRE SECTION TABLEAU DE BORD (view-dashboard) -->
-    <div id="view-dashboard" class="view-section active">
-        <div class="update-box">
-            <div class="update-title">🚀 État des Services (Temps Réel)</div>
-            <div id="status-container" class="status-card">
-                Chargement des statuts...
+
+    <!-- MODAL DE CONNEXION -->
+    <div id="loginModal" class="login-overlay">
+        <div class="login-card">
+            <h2>Rescue Horizon</h2>
+            <p style="font-size:0.85rem; color:#a0a5c0; margin-bottom:15px;">Entrez votre pseudo pour accéder au site</p>
+            <input type="text" id="pseudoInput" placeholder="Votre Pseudo">
+            <button onclick="enterSite()">Accéder au site</button>
+            <div id="loginError" class="login-error"></div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- MENU LATÉRAL -->
+        <div class="sidebar">
+            <div class="sidebar-top">
+                <h2>Rescue Horizon</h2>
+                <div class="nav-group">
+                    <button class="nav-btn active" onclick="switchView('credits', this)">💖 Crédits & Communauté</button>
+                    <button class="nav-btn" onclick="switchView('dashboard', this)">📊 Tableau de Bord</button>
+                    <button class="nav-btn" id="navPseudoManager" style="display:none;" onclick="switchView('pseudos', this)">👥 Gestion Pseudos</button>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:0.8rem; color:#a0a5c0; border-top: 1px solid #2a2e45; padding-top: 10px; margin-bottom: 8px;">
+                    Pseudo : <strong id="userDiscordDisplay" style="color:#5865F2;">--</strong>
+                </div>
+                <div style="font-size:0.8rem; color:#a0a5c0; border-top: 1px solid #2a2e45; padding-top: 10px;">
+                    Statut : <strong id="userRoleDisplay">Membre</strong>
+                </div>
             </div>
         </div>
-        <!-- ... reste de votre code dashboard ... -->
+
+        <!-- CONTENU PRINCIPAL -->
+        <div class="main-content">
+            <div class="header-bar">
+                <div><h1>Panel Rescue Horizon</h1></div>
+                <div style="font-size: 0.9rem; color: #a0a5c0;">Espace Rôleplay & Animation (Temps Réel)</div>
+            </div>
+
+            <!-- SECTION 1 : CRÉDITS -->
+            <div id="view-credits" class="view-section active">
+                <h2>💖 Crédits & Remerciements</h2>
+                <p style="font-size: 0.85rem; color: #a0a5c0; margin-bottom: 20px;">Synchronisé en direct avec le serveur.</p>
+
+                <div class="credits-grid">
+                    <div class="credits-card">
+                        <h3>🏆 Équipe & Remerciements</h3>
+                        <ul class="credits-list" id="creditsListDisplay">
+                            <li><span>Chargement...</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="pub-box">
+                    <h3 id="pubTitleDisplay">🚨 RESCUE HORIZON</h3>
+                    <div class="pub-content" id="pubContentDisplay">Chargement des informations...</div>
+                    <a href="https://discord.gg/Jdba4YvEAG" target="_blank" class="btn-discord-pub" id="pubLinkBtn">🔗 Rejoindre le Discord</a>
+                </div>
+
+                <!-- PANNEAU ADMIN CRÉDITS -->
+                <div id="adminCreditsPanel" class="update-box" style="display: none; border-color: #23a55a;">
+                    <div class="update-title" style="color: #23a55a; margin-bottom: 12px;">🛠️ Administration (Crédits & Pub)</div>
+                    <div class="admin-update-controls" style="display: flex; border-top: none; padding-top: 0;">
+                        <label style="font-size:0.85rem; color:#23a55a; font-weight:bold;">Équipe (Format : Rôle | Nom) :</label>
+                        <textarea id="editCreditsInput" style="height: 100px;"></textarea>
+                        
+                        <label style="font-size:0.85rem; color:#23a55a; font-weight:bold; margin-top: 10px;">Titre de la Publication :</label>
+                        <input type="text" id="editPubTitleInput">
+
+                        <label style="font-size:0.85rem; color:#23a55a; font-weight:bold; margin-top: 10px;">Description :</label>
+                        <textarea id="editPubContentInput"></textarea>
+
+                        <label style="font-size:0.85rem; color:#23a55a; font-weight:bold; margin-top: 10px;">Lien du Bouton :</label>
+                        <input type="text" id="editPubLinkInput">
+
+                        <div style="margin-top: 15px;">
+                            <button class="btn-save" style="background: #23a55a;" onclick="publishCreditsAndPub()">💾 Publier en Temps Réel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2 : TABLEAU DE BORD (AVEC ÉTAT DES SERVICES) -->
+            <div id="view-dashboard" class="view-section">
+                <!-- Bloc Annonces -->
+                <div class="update-box">
+                    <div class="update-header">
+                        <div class="update-title">🚀 Informations & Annonces</div>
+                        <div id="siteUpdateDate" style="font-size:0.8rem; color:#a0a5c0;">--</div>
+                    </div>
+                    <div class="update-content" id="siteUpdateDisplay">Chargement...</div>
+
+                    <div id="adminUpdatePanel" class="admin-update-controls">
+                        <label style="font-size:0.85rem; color:#5865F2; font-weight:bold;">Éditer l'annonce (Admin) :</label>
+                        <textarea id="siteUpdateInput" placeholder="Message..."></textarea>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-save" onclick="publishSiteUpdate()">💾 Publier en Temps Réel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bloc État des Services en Temps Réel (Monitoring automatique) -->
+                <div class="update-box">
+                    <div class="update-title" style="margin-bottom: 12px;">📊 État des Services (Temps Réel)</div>
+                    <div id="status-container">
+                        <div style="color: #a0a5c0; font-size: 0.9rem;">Connexion au système de surveillance...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3 : GESTION DES PSEUDOS -->
+            <div id="view-pseudos" class="view-section">
+                <h2>👥 Gestion des Pseudos Enregistrés</h2>
+                <div class="update-box">
+                    <div style="overflow-x: auto;">
+                        <table class="voice-regions-table">
+                            <thead>
+                                <tr>
+                                    <th>Pseudo</th>
+                                    <th>Date/Heure</th>
+                                    <th>Rôle</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pseudosTableBody">
+                                <tr><td colspan="3" style="text-align: center; color: #a0a5c0;">Chargement...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
+        // Connexion au serveur WebSocket sur votre backend Render
         const socket = io("https://webapi-jlzq.onrender.com");
 
-        // --- NOUVEAU SCRIPT POUR RECEVOIR LES DONNÉES DU SERVER ---
+        let userRole = "member";
+        let currentPseudo = "Visiteur";
 
-        // 1. Réception du statut des services (Toutes les 10s via server.js)
-        socket.on('statusUpdate', (services) => {
-            const container = document.getElementById('status-container');
-            container.innerHTML = ''; 
+        function enterSite() {
+            const pseudoVal = document.getElementById("pseudoInput").value.trim();
+            const errEl = document.getElementById("loginError");
+            if (!pseudoVal) {
+                errEl.innerText = "Veuillez entrer un pseudo valide.";
+                return;
+            }
+
+            currentPseudo = pseudoVal;
+            userRole = (pseudoVal.toLowerCase() === "admin") ? "admin" : "member";
+
+            // Informer le serveur de la connexion
+            socket.emit("userLogin", { pseudo: currentPseudo, role: userRole });
+
+            document.getElementById("loginModal").style.display = "none";
+            document.getElementById("userDiscordDisplay").innerText = currentPseudo;
+            document.getElementById("userRoleDisplay").innerText = userRole === "admin" ? "Administrateur" : "Membre";
+
+            if (userRole === "admin") {
+                document.getElementById("adminUpdatePanel").style.display = "flex";
+                document.getElementById("adminCreditsPanel").style.display = "block";
+                document.getElementById("navPseudoManager").style.display = "block";
+            }
+        }
+
+        // --- ECOUTE DES EVENEMENTS TEMPS RÉEL VENUS DU SERVEUR ---
+
+        socket.on("loadInitialData", (data) => {
+            updateDashboardUI(data.announcement);
+            updateCreditsUI(data.credits);
+            updatePseudosUI(data.pseudos);
+        });
+
+        socket.on("updateAnnounceBroadcast", (data) => {
+            updateDashboardUI(data);
+        });
+
+        socket.on("updateCreditsBroadcast", (data) => {
+            updateCreditsUI(data);
+        });
+
+        socket.on("updatePseudosList", (pseudos) => {
+            updatePseudosUI(pseudos);
+        });
+
+        // Réception automatique du statut des services toutes les 10s
+        socket.on("statusUpdate", (services) => {
+            const container = document.getElementById("status-container");
+            if (!container) return;
             
+            container.innerHTML = "";
             services.forEach(service => {
                 const color = service.status === 'up' ? '#23a55a' : '#f23f43';
                 container.innerHTML += `
@@ -47,18 +336,81 @@
             });
         });
 
-        // 2. Réception des annonces et crédits (Temps réel)
-        socket.on('loadInitialData', (data) => {
-            // Logique pour remplir vos champs existants
-            document.getElementById("siteUpdateDisplay").innerText = data.announcement.text;
-            // ... (Ajoutez ici vos autres fonctions de mise à jour d'UI)
-        });
+        // --- FONCTIONS D'AFFICHAGE ---
 
-        socket.on('updateAnnounceBroadcast', (data) => {
-            document.getElementById("siteUpdateDisplay").innerText = data.text;
-        });
+        function updateDashboardUI(data) {
+            document.getElementById("siteUpdateDisplay").innerText = data.text || "Aucune information.";
+            document.getElementById("siteUpdateDate").innerText = data.date ? `Modifié le : ${data.date}` : "";
+            document.getElementById("siteUpdateInput").value = data.text || "";
+        }
 
-        // ... (Gardez vos fonctions 'enterSite', 'publishSiteUpdate' etc.)
+        function updateCreditsUI(data) {
+            const creditsListEl = document.getElementById("creditsListDisplay");
+            let creditsHtml = "";
+            
+            const rawCredits = data.creditsText || "Créateur & Développeur Principal | Vous";
+            rawCredits.split("\n").forEach(line => {
+                if (line.trim() !== "") {
+                    const parts = line.split("|");
+                    creditsHtml += `<li><span>${parts[0]?.trim()}</span> <strong style="color:#5865F2;">${parts[1]?.trim()}</strong></li>`;
+                }
+            });
+            creditsListEl.innerHTML = creditsHtml;
+
+            document.getElementById("pubTitleDisplay").innerText = data.pubTitle || "RESCUE HORIZON";
+            document.getElementById("pubContentDisplay").innerText = data.pubContent || "";
+            document.getElementById("pubLinkBtn").href = data.pubLink || "#";
+
+            document.getElementById("editCreditsInput").value = rawCredits;
+            document.getElementById("editPubTitleInput").value = data.pubTitle || "";
+            document.getElementById("editPubContentInput").value = data.pubContent || "";
+            document.getElementById("editPubLinkInput").value = data.pubLink || "";
+        }
+
+        function updatePseudosUI(pseudosList) {
+            const tbody = document.getElementById("pseudosTableBody");
+            if (!pseudosList || pseudosList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #a0a5c0;">Aucun pseudo enregistré.</td></tr>`;
+                return;
+            }
+            let html = "";
+            pseudosList.forEach(item => {
+                html += `<tr>
+                    <td style="font-weight: bold; color: #5865F2;">${item.pseudo}</td>
+                    <td style="color: #a0a5c0;">${item.date}</td>
+                    <td><span style="color: ${item.role === 'Administrateur' ? '#23a55a' : '#d1d5db'}">${item.role}</span></td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // --- ACTIONS ADMIN (ENVOI AU SERVEUR) ---
+
+        function publishSiteUpdate() {
+            if (userRole !== "admin") return;
+            const text = document.getElementById("siteUpdateInput").value;
+            socket.emit("saveAnnouncement", { text: text });
+            alert("Annonce publiée en temps réel !");
+        }
+
+        function publishCreditsAndPub() {
+            if (userRole !== "admin") return;
+            const data = {
+                creditsText: document.getElementById("editCreditsInput").value,
+                pubTitle: document.getElementById("editPubTitleInput").value,
+                pubContent: document.getElementById("editPubContentInput").value,
+                pubLink: document.getElementById("editPubLinkInput").value
+            };
+            socket.emit("saveCredits", data);
+            alert("Crédits et publication mis à jour en temps réel !");
+        }
+
+        function switchView(viewName, btn) {
+            document.querySelectorAll(".view-section").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
+            document.getElementById(`view-${viewName}`).classList.add("active");
+            btn.classList.add("active");
+        }
     </script>
 </body>
 </html>
